@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Snake</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.10/dist/vue.js"></script>
+
+    <style>
+        
+        #map {
+            --grid-size: 10;
+    
+            display: grid;
+            grid-template-columns: repeat(var(--grid-size), 50px);  /* 10列 幅30px */
+            grid-template-rows: repeat(var(--grid-size), 50px); /* 10行 高さ30px */
+        }
+    
+        
+        .cell {
+            border: 1px solid white;
+            background: rgb(209, 245, 4);
+        }
+    
+        
+        .cell.body {
+            background: #3cb371;
+        }
+    
+        
+        .cell.fruit {
+            background: #ff7f50;
+        }
+    
+        
+        .cell.head {
+            background: #4169e1;
+        }
+    
+        
+        .container {
+            display: flex;
+            justify-content: center;
+            background: linear-gradient(to right, rgb(0, 155, 255), rgb(30, 30, 30));
+            background-size: 200% 200%;
+            animation: gradient 5s ease infinite;
+        }
+    
+
+h1 {
+    font-size: 48px;
+    font-weight: bold;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 50px;
+    margin-bottom: 30px;
+    color: #db476e;
+    text-shadow: 2px 2px #f39c12;
+}
+
+
+h1:after {
+    content: "";
+    display: block;
+    width: 50px;
+    height: 4px;
+    margin: 20px auto 0;
+    background-color: #f39c12;
+}
+
+
+
+button {
+    width: 10em;
+    height:5em;
+    font-family: "Helvetica Neue", sans-serif;
+    font-weight: bold;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    color: #fff;
+    background-color: #15e649;
+    box-shadow: 0 3px 0 #2e8b57;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+
+button:hover {
+    background-color: #2e8b57;
+}
+
+
+button:active {
+    background-color: #228b22;
+    box-shadow: none;
+    transform: translateY(3px);
+}
+
+
+    
+        
+        @keyframes gradient {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+    </style>
+    
+    
+    
+    
+
+    
+    
+</head>
+<body>
+    <div id='app'>
+        <div class="container">
+        
+        <h1>SCORE: {{ snake.body_indexes.length - 1 }}</h1>
+        <div id='map'>
+            <div v-for="i in grid_size * grid_size"
+                    :class="{
+                        cell: true,
+                        head: snake_head_index === i - 1,
+                        body: snake.body_indexes.includes(i - 1),
+                        fruit: fruit_index === i - 1,
+                    }"
+            ></div>
+        </div>
+
+        
+        <h1 v-if='is_gameover'>
+            GAME OVER<br>
+            <button onclick="location.reload()">再挑戦！</button>
+        </h1>
+    </div>
+</div>
+
+    <script>
+        new Vue({
+            el: '#app',
+
+            data: {
+                grid_size: 10,  
+                fruit_index: 0, 
+
+                
+                snake: {
+
+                    
+                    head_pos: {
+                        x: 1,
+                        y: 3,
+                    },
+
+                    body_indexes: [0],
+                    direction: '→',
+                    speed: 400,
+                },
+            },
+
+            
+            created() {
+
+                
+                this.randomize_fruit_index()
+
+                
+                document.onkeydown = () => {
+                    this.on_keydown(event.keyCode)
+                }
+
+                
+                this.time_goes()
+            },
+
+            watch: {
+                
+                is_eating_fruit(newValue) {
+                    if(!newValue) return
+                    this.grow_up_snake()
+                    this.randomize_fruit_index()
+                },
+            },
+
+            computed: {
+
+                
+                snake_head_index() {
+                    if(this.is_frameout) return null
+                    return this.snake.head_pos.y * this.grid_size + this.snake.head_pos.x
+                },
+
+                
+                is_eating_fruit() {
+                    return this.snake_head_index === this.fruit_index
+                },
+
+                
+                is_suicided() {
+                    return this.snake.body_indexes.includes(this.snake_head_index)
+                },
+
+                
+                is_frameout() {
+                    const head = this.snake.head_pos
+                    return head.x < 0 || this.grid_size <= head.x || head.y < 0 || this.grid_size <= head.y
+                },
+
+                
+                is_gameover() {
+                    return this.is_suicided || this.is_frameout
+                },
+            },
+
+            methods: {
+                
+                time_goes() {
+                    if(this.is_gameover) return
+                    this.forward_snake()
+
+                    
+                    setTimeout(this.time_goes.bind(this), this.snake.speed)
+                },
+
+                
+                forward_snake() {
+
+                    
+                    this.snake.body_indexes.shift()
+                    this.snake.body_indexes.push(this.snake_head_index)
+
+                    
+                    switch(this.snake.direction) {
+                        case '←': this.snake.head_pos.x--; break
+                        case '↑': this.snake.head_pos.y--; break
+                        case '→': this.snake.head_pos.x++; break
+                        case '↓': this.snake.head_pos.y++; break
+                    }
+                },
+
+                
+                grow_up_snake() {
+                    this.snake.body_indexes.unshift(this.snake.body_indexes[0])
+                },
+
+                
+                randomize_fruit_index() {
+                    this.fruit_index = Math.floor(Math.random() * this.grid_size * this.grid_size)  // 0 〜 99 の乱数
+                },
+
+                
+                on_keydown(keyCode) {
+                    switch(keyCode) {
+                        case 37:
+                            if(this.snake.direction !== '→') { this.snake.direction = '←'; }
+                            break
+
+                        case 38:
+                            if(this.snake.direction !== '↓') { this.snake.direction = '↑'; }
+                            break
+
+                        case 39:
+                            if(this.snake.direction !== '←') { this.snake.direction = '→'; }
+                            break
+
+                        case 40:
+                            if(this.snake.direction !== '↑') { this.snake.direction = '↓'; }
+                            break
+                    }
+                },
+            },
+        })
+    </script>
+</body>
+</html>
